@@ -1,50 +1,24 @@
-import {eq} from 'drizzle-orm';
-import {db} from './db/index.js';
-import {demoUsers} from './db/schema/index.js';
+import express from "express";
+import subjectsRouter from "./routes/subjects.js";
+import cors from "cors";
 
-async function main() {
-    try {
-        console.log('Performing CRUD operations...');
+const app = express();
+const PORT = 8000;
 
-        // CREATE: Insert a new user
-        const [newUser] = await db
-            .insert(demoUsers)
-            .values({name: 'Admin User', email: 'admin@example.com'})
-            .returning();
+app.use(cors({
+    origin: process.env.FRONTEND_URL,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true
+}))
 
-        if (!newUser) {
-            throw new Error('Failed to create user');
-        }
+app.use(express.json());
 
-        console.log('✅ CREATE: New user created:', newUser);
+app.use('/api/subjects', subjectsRouter)
 
-        // READ: Select the user
-        const foundUser = await db.select().from(demoUsers).where(eq(demoUsers.id, newUser.id));
-        console.log('✅ READ: Found user:', foundUser[0]);
+app.get('/', (_req, res) => {
+    res.send("Welcome to the Classroom API!");
+});
 
-        // UPDATE: Change the user's name
-        const [updatedUser] = await db
-            .update(demoUsers)
-            .set({name: 'Super Admin'})
-            .where(eq(demoUsers.id, newUser.id))
-            .returning();
-
-        if (!updatedUser) {
-            throw new Error('Failed to update user');
-        }
-
-        console.log('✅ UPDATE: User updated:', updatedUser);
-
-        // DELETE: Remove the user
-        await db.delete(demoUsers).where(eq(demoUsers.id, newUser.id));
-        console.log('✅ DELETE: User deleted.');
-
-        console.log('\nCRUD operations completed successfully.');
-    } catch (error) {
-        console.error('❌ Error performing CRUD operations:', error);
-        process.exit(1);
-    }
-    // The Neon HTTP driver has no pool or persistent connection to close.
-}
-
-main();
+app.listen(PORT, () => {
+    console.log(`Server is running on port http://localhost:${PORT}`);
+});
