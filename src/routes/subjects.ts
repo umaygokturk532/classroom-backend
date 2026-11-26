@@ -18,24 +18,25 @@ router.get("/", async (req, res) => {
         
         // If search query exists, filter by subject name or subject code
         if (search) {
+            const searchPattern = `%${String(search).replace(/[\\%_]/g, '\\$&')}%`;
             filterConditions.push(
                 or(
-                    ilike(subjects.name, `%${search}%`),
-                    ilike(subjects.code, `%${search}%`),
+                    ilike(subjects.name, searchPattern),
+                    ilike(subjects.code, searchPattern),
                 )
             );
         }
         
         // If department filter exists, filter by department name
         if (department) {
-            const deptPattern = `%${String(department).replace(/[%_]/g, '//$&')}%`;
+            const deptPattern = `%${String(department).replace(/[\\%_]/g, '\\$&')}%`;
             filterConditions.push(ilike(departments.name, deptPattern));
         }
         
         const whereClause = filterConditions.length > 0 ? and(...filterConditions) : undefined;
         
         const countResult = await db
-            .select({ count: sql<number>`count(*)` })
+            .select({ count: sql<number>`count(*)::int` })
             .from(subjects)
             .leftJoin(departments, eq(subjects.departmentId, departments.id))
             .where(whereClause);
