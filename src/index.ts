@@ -7,7 +7,7 @@ import subjectsRouter from "./routes/subjects.js";
 import usersRouter from "./routes/users.js";
 import cors from "cors";
 import securityMiddleware from "./middleware/security.js";
-import { toNodeHandler } from "better-auth/node";
+import { fromNodeHeaders, toNodeHandler } from "better-auth/node";
 import { auth } from "./lib/auth.js";
 import classesRouter from "./routes/classes.js";
 
@@ -27,6 +27,19 @@ app.use(cors({
 app.all('/api/auth/*splat', toNodeHandler(auth));
 
 app.use(express.json());
+
+// Attach the logged-in user's role so the rate limiter can apply role-based limits
+app.use(async (req, _res, next) => {
+    try {
+        const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
+        if (session?.user) {
+            req.user = { role: session.user.role as UserRoles };
+        }
+    } catch (err) {
+        console.error('Failed to resolve session', err);
+    }
+    next();
+});
 
 app.use(securityMiddleware);
 
